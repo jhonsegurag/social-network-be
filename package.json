@@ -1,0 +1,30 @@
+{
+  "name": "social-network-be",
+  "version": "1.0.0",
+  "description": "Simple social media using MEAN Stack.",
+  "engines": {
+    "node": "18.x"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "local": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jhon Segura",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "^1.18.3",
+    "connect-multiparty": "^2.2.0",
+    "express": "^4.16.4",
+    "jwt-simple": "^0.5.5",
+    "moment": "^2.24.0",
+    "mongoose": "^5.13.22",
+    "mongoose-pagination": "^1.0.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  }
+}
