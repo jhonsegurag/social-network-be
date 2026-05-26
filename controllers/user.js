@@ -1,351 +1,200 @@
 'use strict';
 
-var bcrypt = require('bcrypt-nodejs');
-var mongoosePaginate = require('mongoose-pagination');
-var User = require('../models/user');
-var Follow = require('../models/follow');
-var Publication = require('../models/publication');
-var jwt = require('../services/jwt');
-var fs = require('fs');
-var path = require('path');
-const upload = require("../middlewares/upload");
+const { Op } = require('sequelize');
+const bcryptjs = require('bcryptjs');
+const User = require('../models/user');
+const Follow = require('../models/follow');
+const Publication = require('../models/publication');
+const jwt = require('../services/jwt');
+const fs = require('fs');
+const path = require('path');
+const upload = require('../middlewares/upload');
 const pify = require('pify');
 
-function saveUser(req, res) {
-    var params = req.body;
-    var user = new User();
-    if (params.name && params.surname && params.nick && params.email && params.password) {
-        user.name = params.name;
-        user.surname = params.surname;
-        user.nick = params.nick;
-        user.email = params.email;
-        user.role = 'ROLE_USER';
-        user.image = null;
-        User.find({$or: [
-                {email: user.email.toLowerCase()},
-                {nick: user.nick.toLowerCase()}
-            ]}).exec((err, users) => {
-            if (err)
-                return res.status(500).send(
-                    { 
-                        status_code: 500,
-                        message: "Creating user error.",
-                        error: err
-                    }
-                );
-            if (users && users.length >= 1) {
-                return res.status(200).send(
-                    {
-                        status_code: 200,
-                        message: "User already exists."
-                    });
-            } else {
-                bcrypt.hash(params.password, null, null, (err, hash) => {
-                    if (err)
-                        return res.status(500).send({message: "Saving user error."});
-                    user.password = hash;
-                });
-                user.save((err, userStored) => {
-                    if (err)
-                        return res.status(500).send({message: "Saving user error."});
-                    if (userStored) {
-                        return res.status(200).send({user: userStored});
-                    } else {
-                        return res.status(404).send({message: "User Not Found."});
-                    }
-                });
-            }
+async function saveUser(req, res) {
+    const params = req.body;
+    if (!params.name || !params.surname || !params.nick || !params.email || !params.password) {
+        return res.status(200).send({ message: 'Invalid Data.' });
+    }
+    try {
+        const existing = await User.findOne({
+            where: {
+                [Op.or]: [
+                    { email: params.email.toLowerCase() },
+                    { nick: params.nick.toLowerCase() },
+                ],
+            },
         });
-    } else {
-        return res.status(200).send({message: 'Invalid Data.'});
+        if (existing) {
+            return res.status(200).send({ status_code: 200, message: 'User already exists.' });
+        }
+        const hash = await bcryptjs.hash(params.password, 10);
+        const user = User.build({
+            name: params.name,
+            surname: params.surname,
+            nick: params.nick,
+            email: params.email,
+            role: 'ROLE_USER',
+            image: null,
+            password: hash,
+        });
+        const userStored = await user.save();
+        return res.status(200).send({ user: userStored });
+    } catch (err) {
+        return res.status(500).send({ message: 'Saving user error.' });
     }
 }
 
-function loginUser(req, res) {
-    var params = req.body;
-    var email = params.email;
-    var password = params.password;
-    User.findOne({email: email}, (err, user) => {
-        if (err)
-            return res.status(500).send({message: "Login error."});
-        if (user) {
-            bcrypt.compare(password, user.password, (err, check) => {
-                if (check) {
-                    if (params.gettoken) {
-                        return res.status(200).send({
-                            token: jwt.createtoken(user)
-                        });
-                    } else {
-                        user.password = undefined;
-                        return res.status(200).send({user});
-                    }
-                } else {
-                    return res.status(500).send({message: "Wrong email or password."});
-                }
-            });
-        } else {
-            return res.status(500).send({message: "Wrong email or password."});
+async function loginUser(req, res) {
+    const params = req.body;
+    try {
+        const user = await User.findOne({ where: { email: params.email } });
+        if (!user) {
+            return res.status(500).send({ message: 'Wrong email or password.' });
         }
-    });
+        const check = await bcryptjs.compare(params.password, user.password);
+        if (!check) {
+            return res.status(500).send({ message: 'Wrong email or password.' });
+        }
+        if (params.gettoken) {
+            return res.status(200).send({ token: jwt.createtoken(user) });
+        }
+        user.password = undefined;
+        return res.status(200).send({ user });
+    } catch (err) {
+        return res.status(500).send({ message: 'Login error.' });
+    }
 }
 
-function getUser(req, res) {
-    var userId = req.params.id;
-    User.findById(userId, (err, user) => {
-        if (!user)
-            return res.status(404).send({message: "User Not Found."});
-        if (err)
-            return res.status(500).send({message: "Request Error."});
-
-        followThisUser(req.user.sub, userId).then((value) => {
-            return res.status(200).send({
-                user,
-                following: value.following,
-                followed: value.followed
-            });
-        });
-    });
+async function getUser(req, res) {
+    const userId = req.params.id;
+    try {
+        const user = await User.findByPk(userId);
+        if (!user) return res.status(404).send({ message: 'User Not Found.' });
+        const value = await followThisUser(req.user.sub, userId);
+        return res.status(200).send({ user, following: value.following, followed: value.followed });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
 async function followThisUser(identity_user_id, user_id) {
-    var following = await Follow.findOne({user: identity_user_id, followed: user_id}).exec()
-            .then((following) => {
-                return following;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var followed = await Follow.findOne({user: user_id, followed: identity_user_id}).exec()
-            .then((followed) => {
-                return followed;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    return {
-        following: following,
-        followed: followed
-    };
+    const following = await Follow.findOne({ where: { userId: parseInt(identity_user_id), followedId: parseInt(user_id) } })
+        .catch(() => null);
+    const followed = await Follow.findOne({ where: { userId: parseInt(user_id), followedId: parseInt(identity_user_id) } })
+        .catch(() => null);
+    return { following, followed };
 }
 
-function getUsers(req, res) {
-    var identity_user_id = req.user.sub;
-    var itemsPerPage = 10;
-    var page = 1;
-    if (req.params.page) {
-        page = req.params.page;
-    }
-    User.find().sort('_id').paginate(page, itemsPerPage, (err, users, total) => {
-        if (!users)
-            return res.status(404).send({message: "Users Not Found."});
-        if (err)
-            return res.status(500).send({message: "Request Error."});
-
-        followUserIds(identity_user_id).then((value) => {
-            return res.status(200).send({
-                users,
-                user_following: value.following,
-                user_follow_me: value.followed,
-                total,
-                pages: Math.ceil(total / itemsPerPage)
-            });
+async function getUsers(req, res) {
+    const identityUserId = req.user.sub;
+    const itemsPerPage = 10;
+    const page = parseInt(req.params.page) || 1;
+    const offset = (page - 1) * itemsPerPage;
+    try {
+        const { count, rows } = await User.findAndCountAll({
+            limit: itemsPerPage,
+            offset,
+            order: [['id', 'ASC']],
         });
-    });
+        if (!rows || rows.length === 0) {
+            return res.status(404).send({ message: 'Users Not Found.' });
+        }
+        const value = await followUserIds(identityUserId);
+        return res.status(200).send({
+            users: rows,
+            user_following: value.following,
+            user_follow_me: value.followed,
+            total: count,
+            pages: Math.ceil(count / itemsPerPage),
+        });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
 async function followUserIds(user_id) {
-    var following = await Follow.find({"user": user_id}).select({'_id': 0, '__v': 0, 'user': 0}).exec()
-            .then((following) => {
-                return following;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var followed = await Follow.find({"followed": user_id}).select({'_id': 0, '__v': 0, 'followed': 0}).exec()
-            .then((followed) => {
-                return followed;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var following_clean = [];
-    following.forEach((follow) => {
-        following_clean.push(follow.followed);
-    });
-    var followed_clean = [];
-    followed.forEach((follow) => {
-        followed_clean.push(follow.user);
-    });
-
+    const following = await Follow.findAll({ where: { userId: parseInt(user_id) } }).catch(() => []);
+    const followed = await Follow.findAll({ where: { followedId: parseInt(user_id) } }).catch(() => []);
     return {
-        following: following_clean,
-        followed: followed_clean
+        following: following.map(f => f.followedId),
+        followed: followed.map(f => f.userId),
     };
 }
 
-function getCounters(req, res) {
-    var userId = req.user.sub;
-    if (req.params.id) {
-        userId = req.params.id;
-    }
-    getCountFollow(userId).then((value) => {
+async function getCounters(req, res) {
+    let userId = req.user.sub;
+    if (req.params.id) userId = req.params.id;
+    try {
+        const value = await getCountFollow(userId);
         return res.status(200).send(value);
-    });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
 async function getCountFollow(user_id) {
-    var following = await Follow.count({"user": user_id}).exec()
-            .then((count) => {
-                return count;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var followed = await Follow.count({"followed": user_id}).exec()
-            .then((count) => {
-                return count;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var publications = await Publication.count({"user": user_id}).exec()
-            .then((count) => {
-                return count;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    return {
-        following: following,
-        followed: followed,
-        publications: publications
-    };
+    const following = await Follow.count({ where: { userId: parseInt(user_id) } });
+    const followed = await Follow.count({ where: { followedId: parseInt(user_id) } });
+    const publications = await Publication.count({ where: { userId: parseInt(user_id) } });
+    return { following, followed, publications };
 }
 
-function updateUser(req, res) {
-    var userId = req.params.id;
-    var update = req.body;
+async function updateUser(req, res) {
+    const userId = req.params.id;
+    const update = req.body;
     delete update.password;
-    if (userId !== req.user.sub) {
-        return res.status(500).send({message: "You do not have permissions to modify the user."});
+    if (parseInt(userId) !== parseInt(req.user.sub)) {
+        return res.status(500).send({ message: 'You do not have permissions to modify the user.' });
     }
-
-    User.find({$or: [
-            {email: update.email.toLowerCase()},
-            {nick: update.nick.toLowerCase()}
-        ]}).exec((err, users) => {
-        var user_isset = false;
-        users.forEach((users) => {
-            if (users._id != userId)
-                user_isset = true;
+    try {
+        const existing = await User.findOne({
+            where: {
+                [Op.or]: [
+                    { email: (update.email || '').toLowerCase() },
+                    { nick: (update.nick || '').toLowerCase() },
+                ],
+            },
         });
-        if (user_isset)
-            return res.status(400).send({message: "The email and/or the nick already exists..."});
-
-        User.findByIdAndUpdate(userId, update, {new : true}, (err, userUpdated) => {
-            if (!userUpdated)
-                return res.status(404).send({message: "User Not Found."});
-            if (err)
-                return res.status(500).send({message: "Request Error."});
-
-            return res.status(200).send({user: userUpdated});
-        });
-    });
-}
-
-function uploadImage(req, res) {
-    var userId = req.params.id;
-    if (req.files) {
-        console.log('Call upload file', req);
-        var file_path = req.files.image.path;
-        var file_split = file_path.split('/');
-        var file_name = file_split[2];
-        var ext_split = file_name.split('\.');
-        var file_ext = ext_split[1];
-        if (userId !== req.user.sub) {
-            return removeFilesOfUploads(res, file_path, "You do not have permissions to modify the user.");
+        if (existing && existing.id !== parseInt(userId)) {
+            return res.status(400).send({ message: 'The email and/or the nick already exists...' });
         }
-        if (file_ext === 'png' || file_ext === 'jpg' || file_ext === 'jpeg' || file_ext === 'gif') {
-            User.findByIdAndUpdate(userId, {image: file_name}, {new : true}, (err, userUpdated) => {
-                if (!userUpdated)
-                    return res.status(404).send({message: "User Not Found."});
-                if (err)
-                    return res.status(500).send({message: "Request Error."});
-
-                return res.status(200).send({user: userUpdated});
-            });
-        } else {
-            return removeFilesOfUploads(res, file_path, "Ups, please upload a valid image file.");
-        }
-    } else {
-        return res.status(200).send({
-            message: "Ups, please upload any file."
-        });
+        await User.update(update, { where: { id: userId } });
+        const userUpdated = await User.findByPk(userId);
+        if (!userUpdated) return res.status(404).send({ message: 'User Not Found.' });
+        return res.status(200).send({ user: userUpdated });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
     }
 }
 
 async function uploadImageMigrate(req, res) {
-
-    var userId = req.params.id;
-    var userFile = '';
-
+    const userId = req.params.id;
     try {
-
-        let buildObject = pify(upload.buildFile("./uploads/users/", "image"));
+        const buildObject = pify(upload.buildFile('./uploads/users/', 'image'));
         await buildObject(req, res);
-    
-        if (req.file == undefined) {
-          return res.status(400).send({ message: "Please upload a file!" });
+        if (!req.file) return res.status(400).send({ message: 'Please upload a file!' });
+        const userFile = req.file.originalname;
+        await User.update({ image: userFile }, { where: { id: userId } });
+        const userUpdated = await User.findByPk(userId);
+        if (!userUpdated) return res.status(404).send({ message: 'User Not Found.' });
+        return res.status(200).send({ user: userUpdated });
+    } catch (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(500).send({ message: 'File size cannot be larger than 2MB!' });
         }
-
-        userFile = req.file.originalname;
-
-        User.findByIdAndUpdate(userId, {image: userFile}, {new : true}, (err, userUpdated) => {
-            if (!userUpdated)
-                return res.status(404).send({message: "User Not Found."});
-            if (err)
-                return res.status(500).send({message: "Request Error."});
-
-            return res.status(200).send({user: userUpdated});
-        });
-
-      } catch (err) {
-        console.log(err);
-    
-        if (err.code == "LIMIT_FILE_SIZE") {
-          return res.status(500).send({
-            message: "File size cannot be larger than 2MB!",
-          });
-        }
-    
-        res.status(500).send({
-          message: `Could not upload the file: ${req.file.originalname}. ${err}`,
-        });
-      }
-    
-}
-
-function removeFilesOfUploads(res, file_path, message) {
-    fs.unlink(file_path, (err) => {
-        return res.status(200).send({message: message});
-    });
+        return res.status(500).send({ message: `Could not upload the file. ${err}` });
+    }
 }
 
 function getImageFile(req, res) {
-    var image_file = req.params.imageFile;
-    var path_file = './uploads/users/' + image_file;
+    const image_file = req.params.imageFile;
+    const path_file = './uploads/users/' + image_file;
     fs.exists(path_file, (exists) => {
         if (exists) {
             res.sendFile(path.resolve(path_file));
         } else {
-            return res.status(200).send({message: "Ups, the file not exists."});
+            return res.status(200).send({ message: 'Ups, the file not exists.' });
         }
     });
 }
@@ -357,7 +206,6 @@ module.exports = {
     getUsers,
     getCounters,
     updateUser,
-    uploadImage,
     uploadImageMigrate,
-    getImageFile
+    getImageFile,
 };

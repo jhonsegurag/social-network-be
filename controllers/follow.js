@@ -1,156 +1,138 @@
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
-var mongoosePaginate = require('mongoose-pagination');
-var User = require('../models/user');
-var Follow = require('../models/follow');
+const User = require('../models/user');
+const Follow = require('../models/follow');
 
-function saveFollow(req, res) {
-    var params = req.body;
-    var follow = new Follow();
-    follow.user = req.user.sub;
-    follow.followed = params.followed;
-
-    follow.save((err, followStored) => {
-        if (err)
-            return res.status(500).send({message: "Saving follow error."});
-        if (!followStored)
-            return res.status(404).send({message: "User follow not saved."});
-
-        return res.status(200).send({follow: followStored});
-    });
+async function saveFollow(req, res) {
+    const params = req.body;
+    if (!params.followed) {
+        return res.status(200).send({ message: 'Invalid Data.' });
+    }
+    const userId = parseInt(req.user.sub);
+    const followedId = parseInt(params.followed);
+    if (userId === followedId) {
+        return res.status(200).send({ message: 'You cannot follow yourself.' });
+    }
+    try {
+        const follow = await Follow.create({ userId, followedId });
+        return res.status(200).send({ follow });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
-function deleteFollow(req, res) {
-    var userId = req.user.sub;
-    var followId = req.params.id;
-
-    Follow.find({'user': userId, 'followed': followId}).remove(err => {
-        if (err)
-            return res.status(500).send({message: "Deleting follow error."});
-
-        return res.status(200).send({message: 'Follow deleted.'});
-    });
+async function deleteFollow(req, res) {
+    const followId = parseInt(req.params.id);
+    try {
+        const follow = await Follow.findByPk(followId);
+        if (!follow) {
+            return res.status(404).send({ message: 'Follow Not Found.' });
+        }
+        if (parseInt(follow.userId) !== parseInt(req.user.sub)) {
+            return res.status(500).send({ message: 'You do not have permissions to delete this follow.' });
+        }
+        await Follow.destroy({ where: { id: followId } });
+        return res.status(200).send({ message: 'Follow deleted.' });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
-function getFollowingUsers(req, res) {
-    var userId = req.user.sub;
+async function getFollowingUsers(req, res) {
+    let userId = req.user.sub;
+    let page = 1;
 
     if (req.params.id && req.params.page) {
         userId = req.params.id;
-    }
-
-    var page = 1;
-    if (req.params.page) {
         page = req.params.page;
-    } else {
+    } else if (req.params.id) {
         page = req.params.id;
     }
 
-    var itemsPerPage = 10;
+    const itemsPerPage = 10;
+    const offset = (parseInt(page) - 1) * itemsPerPage;
 
-    Follow.find({user: userId}).populate({path: 'followed'}).paginate(page, itemsPerPage, (err, follows, total) => {
-        if (err)
-            return res.status(500).send({message: "Get follow error."});
-        if (!follows)
-            return res.status(404).send({message: "Without follows."});
-
-        followUserIds(userId).then((value) => {
-            return res.status(200).send({
-                total: total,
-                pages: Math.ceil(total / itemsPerPage),
-                follows,
-                user_following: value.following,
-                user_follow_me: value.followed
-            });
+    try {
+        const { count, rows } = await Follow.findAndCountAll({
+            where: { userId: parseInt(userId) },
+            limit: itemsPerPage,
+            offset,
+            include: [{ model: User, as: 'followedUser' }],
         });
-    });
+        const value = await followUserIds(req.user.sub);
+        return res.status(200).send({
+            total: count,
+            pages: Math.ceil(count / itemsPerPage),
+            follows: rows,
+            user_following: value.following,
+            user_follow_me: value.followed,
+        });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
-function getFollowedUser(req, res) {
-    var userId = req.user.sub;
+async function getFollowedUser(req, res) {
+    let userId = req.user.sub;
+    let page = 1;
 
     if (req.params.id && req.params.page) {
         userId = req.params.id;
-    }
-
-    var page = 1;
-    if (req.params.page) {
         page = req.params.page;
-    } else {
+    } else if (req.params.id) {
         page = req.params.id;
     }
 
-    var itemsPerPage = 10;
+    const itemsPerPage = 10;
+    const offset = (parseInt(page) - 1) * itemsPerPage;
 
-    Follow.find({followed: userId}).populate('user').paginate(page, itemsPerPage, (err, follows, total) => {
-        if (err)
-            return res.status(500).send({message: "Get follow error."});
-        if (!follows)
-            return res.status(404).send({message: "Without followers."});
-
-        followUserIds(userId).then((value) => {
-            return res.status(200).send({
-                total: total,
-                pages: Math.ceil(total / itemsPerPage),
-                follows,
-                user_following: value.following,
-                user_follow_me: value.followed
-            });
+    try {
+        const { count, rows } = await Follow.findAndCountAll({
+            where: { followedId: parseInt(userId) },
+            limit: itemsPerPage,
+            offset,
+            include: [{ model: User, as: 'follower' }],
         });
-    });
+        const value = await followUserIds(req.user.sub);
+        return res.status(200).send({
+            total: count,
+            pages: Math.ceil(count / itemsPerPage),
+            follows: rows,
+            user_following: value.following,
+            user_follow_me: value.followed,
+        });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
+    }
 }
 
-function getMyFollows(req, res) {
-    var userId = req.user.sub;
-    var find = Follow.find({user: userId});
-    if (req.params.followed) {
-        find = Follow.find({followed: userId});
+async function getMyFollows(req, res) {
+    const userId = parseInt(req.user.sub);
+    try {
+        let follows;
+        if (req.params.followed) {
+            follows = await Follow.findAll({
+                where: { followedId: userId },
+                include: [{ model: User, as: 'follower' }],
+            });
+        } else {
+            follows = await Follow.findAll({
+                where: { userId },
+                include: [{ model: User, as: 'followedUser' }],
+            });
+        }
+        return res.status(200).send({ follows });
+    } catch (err) {
+        return res.status(500).send({ message: 'Request Error.' });
     }
-
-    find.populate('user followed').exec((err, follows) => {
-        if (err)
-            return res.status(500).send({message: "Get follow error."});
-        if (!follows)
-            return res.status(404).send({message: "Without follows."});
-
-        return res.status(200).send({follows});
-    });
 }
 
 async function followUserIds(user_id) {
-    var following = await Follow.find({"user": user_id}).select({'_id': 0, '__v': 0, 'user': 0}).exec()
-            .then((following) => {
-                return following;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var followed = await Follow.find({"followed": user_id}).select({'_id': 0, '__v': 0, 'followed': 0}).exec()
-            .then((followed) => {
-                return followed;
-            })
-            .catch((err) => {
-                return handleError(err);
-            });
-
-    var following_clean = [];
-
-    following.forEach((follow) => {
-        following_clean.push(follow.followed);
-    });
-
-    var followed_clean = [];
-
-    followed.forEach((follow) => {
-        followed_clean.push(follow.user);
-    });
-
+    const following = await Follow.findAll({ where: { userId: parseInt(user_id) } }).catch(() => []);
+    const followed = await Follow.findAll({ where: { followedId: parseInt(user_id) } }).catch(() => []);
     return {
-        following: following_clean,
-        followed: followed_clean
+        following: following.map(f => f.followedId),
+        followed: followed.map(f => f.userId),
     };
 }
 
@@ -159,5 +141,5 @@ module.exports = {
     deleteFollow,
     getFollowingUsers,
     getFollowedUser,
-    getMyFollows
+    getMyFollows,
 };
