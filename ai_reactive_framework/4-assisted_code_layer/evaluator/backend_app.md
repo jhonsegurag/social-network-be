@@ -89,7 +89,7 @@
 
 | Finding | Reason |
 |---------|--------|
-| `os.Getenv("SECRET_KEY")` in source code | Hardcoded secret reference — use Fury Secrets |
+| `os.Getenv("SECRET_KEY")` in source code | Hardcoded secret reference — use Platform Secrets |
 | `fmt.Sprintf("SELECT ... WHERE id = '%s'", userInput)` | SQL injection |
 | `http.Get(r.URL.Query().Get("url"))` | SSRF — user-controlled URL |
 | `log.Info(ctx, "token: "+token)` | Token exposure in logs |

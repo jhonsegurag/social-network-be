@@ -1,6 +1,6 @@
 # Java Scaffolding Guide
 
-> Step-by-step guide to add a new feature to a Java / Spring Boot Fury service using Hexagonal Architecture.
+> Step-by-step guide to add a new feature to a Java / Spring Boot Platform service using Hexagonal Architecture.
 
 ---
 

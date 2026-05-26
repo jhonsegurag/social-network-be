@@ -1,6 +1,6 @@
 # Architecture Patterns Catalog
 
-> Reference catalog of distributed system patterns. For each pattern: name, description, when to use, Go/Fury implementation sketch, and trade-offs.
+> Reference catalog of distributed system patterns. For each pattern: name, description, when to use, Go/Platform implementation sketch, and trade-offs.
 
 ---
 
@@ -19,7 +19,7 @@ Instead of storing only the current state of an entity, every state change is pe
 - Simple CRUD with no audit requirements — event sourcing adds significant complexity for no gain
 - The team is not yet familiar with event replay semantics and projection management
 
-**Go/Fury Implementation Sketch**
+**Go/Platform Implementation Sketch**
 
 ```go
 // Event store write side
@@ -72,7 +72,7 @@ Separates the read model (queries) from the write model (commands) of a system. 
 - Simple services with symmetric read/write load and no complex query requirements
 - Small teams where the operational overhead of maintaining two models outweighs the benefit
 
-**Go/Fury Implementation Sketch**
+**Go/Platform Implementation Sketch**
 
 ```go
 // Command side — write model (normalized)
@@ -129,7 +129,7 @@ A sequence of local transactions, each publishing an event or message that trigg
 - The operation fits within a single service and a local ACID transaction is available
 - The compensating logic is unclear or impossible to define (non-reversible side effects)
 
-**Go/Fury Implementation Sketch**
+**Go/Platform Implementation Sketch**
 
 ```go
 // Choreography-based Saga (event-driven, no central coordinator)
@@ -189,7 +189,7 @@ CLOSED ──(error threshold exceeded)──► OPEN ──(timeout elapsed)─
 - Calls to local in-process dependencies (no network hop)
 - Operations where a fast-fail is worse for the business than waiting (synchronous payment capture)
 
-**Go/Fury Implementation Sketch**
+**Go/Platform Implementation Sketch**
 
 ```go
 // Using a circuit breaker library (e.g., sony/gobreaker or resilience4j-go equivalent)

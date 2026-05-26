@@ -1,6 +1,6 @@
 # Java Platform Specification
 
-> Java / Spring Boot coding standards and Fury PaaS patterns for MercadoLibre backend services. Reference when building or reviewing Java microservices in the ecosystem.
+> Java / Spring Boot coding standards and Platform PaaS patterns for SpyriaIT backend services. Reference when building or reviewing Java microservices in the ecosystem.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## Architecture
 
-Hexagonal Architecture aligned with Fury's layered service standards:
+Hexagonal Architecture aligned with Platform's layered service standards:
 
 ```
 controller/          ← HTTP adapters (@RestController)
@@ -182,9 +182,9 @@ log.error("Repository error for featureId={}", featureId, exception);
 
 ## Security Checklist
 
-- [ ] No hardcoded credentials — use Fury Secrets or Spring `@Value` from env vars
+- [ ] No hardcoded credentials — use Platform Secrets or Spring `@Value` from env vars
 - [ ] Constructor injection only — no field injection
 - [ ] Input validated with `@Valid` at controller boundary
 - [ ] `@RestControllerAdvice` catches all exceptions — no raw stack traces in responses
 - [ ] SQL via JPA/Criteria — no string concatenation with user input
-- [ ] Authorization via MercadoLibre SDK — not custom logic
+- [ ] Authorization via SpyriaIT SDK — not custom logic

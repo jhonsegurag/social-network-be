@@ -153,7 +153,7 @@ type crossBorderPricing struct{}
 **Intent**
 Passes a request through a chain of handlers. Each handler decides to process the request or pass it to the next handler.
 
-**In this project**: HTTP middleware pipeline. Fury's `web.Handler` wraps handlers in a middleware chain for auth, logging, tracing.
+**In this project**: HTTP middleware pipeline. Platform's `web.Handler` wraps handlers in a middleware chain for auth, logging, tracing.
 
 **Go Example**
 ```go

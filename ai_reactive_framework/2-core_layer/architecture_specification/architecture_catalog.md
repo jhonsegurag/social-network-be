@@ -36,7 +36,7 @@ A single deployable unit where all components — UI, business logic, data acces
 - Technology heterogeneity is needed across domains
 
 **Applicability to this project**
-This service (`{app_name}`) is deployed as a single Go binary on Fury PaaS. It is effectively a modular monolith within the omnichannel bounded context. New features are added as POD vertical slices within the same binary — not as separate services.
+This service (`{app_name}`) is deployed as a single Go binary on Platform PaaS. It is effectively a modular monolith within the omnichannel bounded context. New features are added as POD vertical slices within the same binary — not as separate services.
 
 ---
 
@@ -68,7 +68,7 @@ The application is decomposed into small, independently deployable services, eac
 - The operational maturity (observability, service mesh, CI/CD per service) is not in place
 
 **Applicability to this project**
-This service is itself a microservice within MercadoLibre's broader platform. It consumes data from upstream services (orders, shipping, buyers) via their public APIs. Within this service's boundary, use POD modular structure — do not create separate deployable services for individual features.
+This service is itself a microservice within SpyriaIT's broader platform. It consumes data from upstream services (orders, shipping, buyers) via their public APIs. Within this service's boundary, use POD modular structure — do not create separate deployable services for individual features.
 
 **Decomposition heuristics**
 - Decompose by business capability, not by technical layer

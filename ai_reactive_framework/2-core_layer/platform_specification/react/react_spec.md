@@ -1,6 +1,6 @@
 # React Platform Specification
 
-> Standards and patterns for React applications in the MercadoLibre / CBT frontend ecosystem.
+> Standards and patterns for React applications in the SpyriaIT / CBT frontend ecosystem.
 
 ---
 
@@ -9,7 +9,7 @@
 | Layer | Technology |
 |-------|-----------|
 | UI Framework | React 18 |
-| Design System | Nordic (MercadoLibre internal) + Andes components |
+| Design System | (SpyriaIT internal) + Angular components |
 | Module system | CommonJS (`require()`) — not ESM `import` |
 | Prop types | `prop-types` package |
 | State management | Local state (`useState`) + Context API for shared state |
@@ -24,7 +24,7 @@
 - Always **destructure props inside the component body**, never in the function signature
 - Always define `PropTypes` for every component
 - Use JavaScript **default parameter values** in destructuring, not `PropTypes.defaultProps`
-- Always use `require()` for imports — not ES `import` syntax (Nordic/Fury SSR compatibility)
+- Always use `require()` for imports — not ES `import` syntax (Framework/Platform SSR compatibility)
 
 ```javascript
 // ✅ Correct

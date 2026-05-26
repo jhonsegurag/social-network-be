@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Simple social media using MEAN Stack.",
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "main": "index.js",
   "scripts": {

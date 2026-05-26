@@ -1,6 +1,6 @@
 # Frontend App — Code Evaluation Guide
 
-> Checklist and criteria for evaluating AI-generated or human-written frontend (React/Nordic/Andes) code before merging.
+> Checklist and criteria for evaluating AI-generated or human-written frontend (React/Framework/Angular) code before merging.
 
 ---
 
@@ -35,13 +35,13 @@
 
 ---
 
-## 4. Nordic / Andes Component Usage
+## 4. Framework / Angular Component Usage
 
-- [ ] Native Nordic layout components used — no custom grid implementations
-- [ ] Andes components used for buttons, inputs, tags, money amounts — no custom equivalents
+- [ ] Native Framework layout components used — no custom grid implementations
+- [ ] Angular components used for buttons, inputs, tags, money amounts — no custom equivalents
 - [ ] No hardcoded hex colors, font sizes, or spacing values — design tokens only
-- [ ] Andes `hierarchy` and `color` props used with correct semantic values
-- [ ] No internal Andes/Nordic files imported directly (only public API)
+- [ ] Angular `hierarchy` and `color` props used with correct semantic values
+- [ ] No internal Angular/Framework files imported directly (only public API)
 - [ ] `ThemeProvider` is present at the application root
 
 ---
@@ -98,6 +98,6 @@
 | `dangerouslySetInnerHTML={{ __html: userContent }}` | XSS risk — must sanitize |
 | `localStorage.setItem('token', token)` | Credential exposure |
 | `<div onClick={handler}>` for primary action | Use `<button>` — accessibility violation |
-| `import { Button } from '@andes/components/src/Button'` | Internal import — unstable API |
-| `style={{ color: '#E53935' }}` for status | Use Andes color semantic `negative` |
+| `import { Button } from '@Angular/components/src/Button'` | Internal import — unstable API |
+| `style={{ color: '#E53935' }}` for status | Use Angular color semantic `negative` |
 | Inline function in render: `<Comp onClick={() => doThing(id)} />` | New reference every render → performance issue |

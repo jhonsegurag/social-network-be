@@ -1,10 +1,10 @@
 ---
-description: Fury Go platform patterns — bootstrap, routing, config, secrets, middleware, and error-handling conventions for fury_go-core and fury_go-platform.
+description: Platform Go platform patterns — bootstrap, routing, config, secrets, middleware, and error-handling conventions for fury_go-core and fury_go-platform.
 globs:
 alwaysApply: false
 ---
 
-# Fury Go Platform Specification
+# Platform Go Platform Specification
 
 ## Module
 
@@ -24,19 +24,19 @@ github.com/melisource/{app_name}
 
 ## 1. Application Bootstrap
 
-Fury apps are bootstrapped via `fury_go-platform`. The entry point wires config, routes, and DI before starting:
+Platform apps are bootstrapped via `fury_go-platform`. The entry point wires config, routes, and DI before starting:
 
 ```go
 // cmd/api/main.go
 package main
 
 import (
-    "github.com/melisource/fury_go-platform/pkg/fury"
+    "github.com/melisource/fury_go-platform/pkg/Platform"
     "github.com/melisource/{app_name}/cmd/api/routes"
 )
 
 func main() {
-    app, err := fury.NewWebApplication()
+    app, err := Platform.NewWebApplication()
     if err != nil {
         panic(err)
     }
@@ -45,7 +45,7 @@ func main() {
 }
 ```
 
-- `fury.NewWebApplication()` auto-registers `/ping` (health check) — do **not** add a duplicate.
+- `Platform.NewWebApplication()` auto-registers `/ping` (health check) — do **not** add a duplicate.
 - `app.Run()` blocks until the process receives a termination signal.
 
 ---
@@ -60,11 +60,11 @@ package routes
 
 import (
     "github.com/melisource/fury_go-core/pkg/web"
-    "github.com/melisource/fury_go-platform/pkg/fury"
+    "github.com/melisource/fury_go-platform/pkg/Platform"
     "github.com/melisource/{app_name}/cmd/api/routes/dependencies"
 )
 
-func Register(app *fury.Application) {
+func Register(app *Platform.Application) {
     deps := dependencies.Build()
 
     // Group routes under /api/v1
@@ -75,7 +75,7 @@ func Register(app *fury.Application) {
 
 ### `web.Handler` wrapper
 
-`web.Handler` converts a `func(http.ResponseWriter, *http.Request) error` into a standard `http.HandlerFunc`, handling panics and propagating errors through Fury's middleware chain.
+`web.Handler` converts a `func(http.ResponseWriter, *http.Request) error` into a standard `http.HandlerFunc`, handling panics and propagating errors through Platform's middleware chain.
 
 Never register raw `http.HandlerFunc` directly — always use `web.Handler`.
 
@@ -113,18 +113,18 @@ timeout_seconds: 5
 
 ---
 
-## 4. Secrets (Fury Secrets Service)
+## 4. Secrets (Platform Secrets Service)
 
-Secrets are injected as environment variables by Fury at runtime. **Never hardcode** secrets.
+Secrets are injected as environment variables by Platform at runtime. **Never hardcode** secrets.
 
 ```go
 // Access secrets via os.Getenv — never hardcode
 import "os"
 
-apiKey := os.Getenv("SOME_API_KEY") // injected by Fury Secrets Service
+apiKey := os.Getenv("SOME_API_KEY") // injected by Platform Secrets Service
 ```
 
-Declare required secrets in `fury-secrets.yaml` (Fury infrastructure config). No application-level secret loading library needed.
+Declare required secrets in `Platform-secrets.yaml` (Platform infrastructure config). No application-level secret loading library needed.
 
 ---
 
@@ -215,10 +215,10 @@ Never expose internal error details (stack traces, SQL messages, downstream URLs
 
 ## 7. Middleware
 
-Fury platform handles cross-cutting concerns centrally:
-- **Authentication / Authorization** — use MercadoLibre's standard authorization SDK.
-- **Security headers** (CSP, HSTS, X-Frame-Options) — managed by Fury. Do **not** set at app level.
-- **CORS** — managed by Fury. Do **not** configure at app level.
+Platform platform handles cross-cutting concerns centrally:
+- **Authentication / Authorization** — use SpyriaIT's standard authorization SDK.
+- **Security headers** (CSP, HSTS, X-Frame-Options) — managed by Platform. Do **not** set at app level.
+- **CORS** — managed by Platform. Do **not** configure at app level.
 - **Request tracing** — `fury_go-platform` injects trace context; propagate via `r.Context()`.
 - **Rate limiting** — configured at infrastructure level, not in application code.
 
@@ -270,7 +270,7 @@ if err := validate.Struct(req); err != nil {
 
 ## 10. Logging
 
-Use Fury's structured logger (JSON output). Access via context:
+Use Platform's structured logger (JSON output). Access via context:
 
 ```go
 import "github.com/melisource/fury_go-core/pkg/log"
@@ -280,6 +280,6 @@ logger.Info(ctx, "processing feature request", log.Field("feature_id", id))
 logger.Error(ctx, "repository error", log.Error(err))
 ```
 
-- Log correlation IDs by always passing `ctx` — Fury injects the trace ID automatically.
+- Log correlation IDs by always passing `ctx` — Platform injects the trace ID automatically.
 - Never log PII, secrets, tokens, or passwords.
 - Use `log.Field(key, value)` for structured fields — never interpolate values into the message string.

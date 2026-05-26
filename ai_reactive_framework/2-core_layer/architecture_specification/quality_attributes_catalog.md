@@ -79,8 +79,8 @@ The ability of the system to dynamically acquire and release resources in respon
 - Fine-grained microservices scale independently but increase operational overhead
 
 **In this project**
-- Fury PaaS handles horizontal scaling automatically — application code must be stateless
-- Never use global mutable variables in request handlers (violates Fury's security & scaling requirements)
+- Platform PaaS handles horizontal scaling automatically — application code must be stateless
+- Never use global mutable variables in request handlers (violates Platform's security & scaling requirements)
 
 ---
 
@@ -127,10 +127,10 @@ The degree to which the system protects data and operations from unauthorized ac
 **Tactics**
 - Validate all input at system boundaries using strongly typed structs with explicit constraints
 - Never expose PII, secrets, tokens, or stack traces in logs, error messages, or responses
-- Use MercadoLibre's authorization SDK for all identity and permission checks
+- Use SpyriaIT's authorization SDK for all identity and permission checks
 - Apply principle of least privilege — services request only the scopes they need
 - Use parameterized queries / ORM abstractions — never concatenate user input into queries
-- Never hardcode credentials; use Fury Secrets Service for injection
+- Never hardcode credentials; use Platform Secrets Service for injection
 
 **Trade-offs**
 - Strict input validation adds latency to the request path but prevents injection attacks
@@ -138,4 +138,4 @@ The degree to which the system protects data and operations from unauthorized ac
 
 **In this project**
 - Security rules defined in `.claude/rules/go/go-security-patterns-rules_v1.md` must be applied to all code
-- CORS, security headers, and rate limiting are managed centrally by Fury — do not configure at app level
+- CORS, security headers, and rate limiting are managed centrally by Platform — do not configure at app level

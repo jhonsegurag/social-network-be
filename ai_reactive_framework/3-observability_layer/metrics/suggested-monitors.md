@@ -11,7 +11,7 @@ alwaysApply: false
 | Component | Technology |
 |-----------|-----------|
 | Metrics SDK | `go.opentelemetry.io/otel/metric` v1.41.0 |
-| Backend | Datadog (via OTel collector on Fury PaaS) |
+| Backend | Datadog (via OTel collector on Platform PaaS) |
 | Tracing | OpenTelemetry (propagated through `r.Context()`) |
 
 ---
@@ -297,4 +297,4 @@ tags:    ["feature:[feature]", "team:cbt-sales", "severity:critical"]
 | Latency | `p99(http.latency_ms)` | ≤ 500 ms |
 | Repository success rate | `1 - (repository.errors_total / repository.calls_total)` | ≥ 99.5% |
 
-Define SLOs in the Fury platform SLO dashboard and link them to the monitors above.
+Define SLOs in the Platform platform SLO dashboard and link them to the monitors above.

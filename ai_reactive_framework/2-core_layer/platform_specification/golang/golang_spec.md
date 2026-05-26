@@ -1,6 +1,6 @@
 # Go Platform Specification
 
-> Go coding standards and platform patterns for Fury PaaS microservices at MercadoLibre. Apply to all Go services in the `{app_name}` ecosystem.
+> Go coding standards and platform patterns for Platform PaaS microservices at SpyriaIT. Apply to all Go services in the `{app_name}` ecosystem.
 
 ---
 
@@ -9,7 +9,7 @@
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Go | 1.22.5 |
-| Platform | Fury PaaS | — |
+| Platform | Platform PaaS | — |
 | HTTP framework | `fury_go-core/pkg/web` | v1.13.2 |
 | Bootstrap | `fury_go-platform` | v1.17.1 |
 | Validation | `go-playground/validator/v10` | v10.30.1 |
@@ -94,7 +94,7 @@ func (h *FeatureHandler) GetFeature(w http.ResponseWriter, r *http.Request) erro
 }
 ```
 
-- Return `error` from handlers — Fury's `web.Handler` wrapper handles the response on non-nil error
+- Return `error` from handlers — Platform's `web.Handler` wrapper handles the response on non-nil error
 - Use `web.EncodeJSON` — never write to `http.ResponseWriter` directly
 - Use `web.DecodeJSON` for request body decoding
 
@@ -144,6 +144,6 @@ See `testing_template.mdc` for full patterns.
 - [ ] All input validated with `validator.Struct()` at handler boundary
 - [ ] No raw SQL with user input — parameterized queries only
 - [ ] No PII in logs or error responses
-- [ ] Authorization via MercadoLibre SDK, not custom logic
+- [ ] Authorization via SpyriaIT SDK, not custom logic
 - [ ] No global mutable state in handlers
 - [ ] All outbound HTTP calls use allowlisted URLs — never user-controlled
