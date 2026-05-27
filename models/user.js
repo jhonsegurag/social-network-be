@@ -1,15 +1,47 @@
 'use strict';
 
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var UserSchema = Schema({
-    name: String,
-    surname: String,
-    nick: String,
-    email: String,
-    password: String,
-    role: String,
-    image: String
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const User = sequelize.define('User', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+    },
+    name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+    },
+    surname: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+    },
+    nick: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+        unique: true,
+    },
+    email: {
+        type: DataTypes.STRING(150),
+        allowNull: false,
+        unique: true,
+    },
+    password: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+    },
+    role: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'ROLE_USER',
+    },
+    image: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
+}, {
+    tableName: 'users',
+    timestamps: true,
 });
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = User;

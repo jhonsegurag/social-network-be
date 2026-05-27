@@ -2,11 +2,11 @@
 
 var jwt = require('jwt-simple');
 var moment = require('moment');
-var secret = 'Secret_Key1-2-3.';
+const secret = process.env.JWT_SECRET;
 
 exports.createtoken = function (user) {
     var payload = {
-        sub: user._id,
+        sub: user.id,
         name: user.name,
         surname: user.surname,
         nick: user.nick,

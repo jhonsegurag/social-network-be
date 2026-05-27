@@ -1,10 +1,31 @@
 'use strict';
 
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
-var FollowSchema = Schema({
-    user: {type: Schema.ObjectId, ref: 'User'},
-    followed: {type: Schema.ObjectId, ref: 'User'}
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+const User = require('./user');
+
+const Follow = sequelize.define('Follow', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+    },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'users', key: 'id' },
+    },
+    followedId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'users', key: 'id' },
+    },
+}, {
+    tableName: 'follows',
+    timestamps: true,
 });
 
-module.exports = mongoose.model('Follow', FollowSchema);
+Follow.belongsTo(User, { foreignKey: 'userId', as: 'follower' });
+Follow.belongsTo(User, { foreignKey: 'followedId', as: 'followedUser' });
+
+module.exports = Follow;
