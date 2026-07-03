@@ -1,4 +1,4 @@
-# Project Context — social-network-be
+# Project Context — social-network-be / JSP
 
 ## Module
 
@@ -12,6 +12,21 @@ social-network-be
 A **Node.js REST API backend** for a simple social media network built with the MEAN stack (MongoDB, Express, Angular, Node). It exposes CRUD endpoints for user management, a follow/unfollow social graph, timeline publications with image attachments, and direct messaging between users.
 
 The service is not event-driven — it is a synchronous, request/response HTTP API consumed by a frontend client. Authentication is stateless JWT-based.
+
+**Target Product — JSP (Job Social Platform):** The codebase is evolving toward a professional social network that combines social publishing features with an intelligent job-matching engine. JSP connects recruiters with professionals through profile-based matching, job postings, applications, and content publishing — all in a single collaborative environment.
+
+## Product Vision — JSP
+
+### Goals
+- Facilitate connections between professionals and job opportunities
+- Build a dynamic, interactive professional social network
+- Implement an intelligent recommendation system based on profile matching
+- Optimize the recruitment process for companies
+- Promote professional growth and networking
+
+### User Types
+- **professional** — individual job-seeker with education history, work experience, skills
+- **Empresa** — recruiting company that publishes job postings and reviews applicants
 
 ## Tech Stack
 
@@ -28,6 +43,19 @@ The service is not event-driven — it is a synchronous, request/response HTTP A
 | Pagination | mongoose-pagination | ^1.0.0 |
 | Date utilities | moment | ^2.24.0 |
 | Dev server | nodemon | ^1.18.9 |
+
+### Suggested Target Architecture (JSP)
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| API Gateway | TBD | Route traffic across microservices |
+| Relational DB | PostgreSQL | Structured data (users, jobs, applications) |
+| Document DB | MongoDB | Content (publications, messages) |
+| Cache / Queue | Redis + RabbitMQ | Async processing, session caching |
+| Search | Elasticsearch | Advanced job/profile search |
+| File storage | AWS S3 / GCS | Persistent image/document storage |
+| Email | SendGrid / AWS SES | Transactional email |
+| Image processing | Cloudinary / ImageKit | Resize, optimize uploads |
 
 ## Architecture
 
@@ -134,6 +162,63 @@ MongoDB
 | `Publication` | `text`, `file`, `created_at`, `user` (→ User) |
 | `Message` | `emitter` (→ User), `receiver` (→ User), `text`, `created_at`, `viewed` |
 
+## Functional Requirements — JSP
+
+### HU-JSP01: User Registration (professional / Empresa)
+- Dual registration flow: **professional** (name, surname, email, password, country) or **Empresa** (razón social, NIT/RUC, corporate email, sector, country)
+- Password policy: min 8 chars, uppercase, lowercase, numbers
+- Email verification link (24h expiry) + extra manual verification for companies
+- Account status: `pending_verification` → `active`
+
+### HU-JSP02: Login
+- Email + password authentication with account state check
+- Account lockout after 5 failed attempts (15 min cooldown)
+- Optional: "Remember me" (30 days), forgot password, Google/LinkedIn OAuth, 2FA
+- JWT with configurable lifetime + auto-renewal; logout invalidates token
+- Inactivity logout at 2 hours
+
+### HU-JSP03: Professional Profile (Historial Laboral)
+- **Personal**: profile photo (JPG/PNG ≤5MB), title, location, availability, professional summary (≤500 chars), links (LinkedIn, GitHub, portfolio), privacy settings
+- **Education**: multiple records — institution, degree, level, dates, status, certificates (PDF/JPG/PNG ≤10MB each)
+- **Work experience**: multiple records — company, role, dates, functions, achievements, technologies; experience level auto-calculated (Junior 0-2y, Semi-Senior 2-5y, Senior 5-8y, Lead 8+y)
+- **Skills**: technical, soft, languages, certifications; proficiency levels; endorsement system; skill verification tests (optional)
+- Profile completeness indicator with suggestions; PDF export
+
+### HU-JSP04: Create Job Posting (Convocatoria)
+- Fields: title (≤100 chars), department, location/remote, modality, contract type, hierarchy level, description (≤2000 chars), requirements, salary range, benefits
+- Draft → preview → publish workflow; scheduled publishing; template cloning
+- Post-publish: limited editing, applicant panel, statistics
+
+### HU-JSP05: Job Recommendations
+- Matching engine weights: skills (40%), experience (30%), location/modality (15%), salary (10%), culture (5%)
+- Compatibility score 0–100% per offer with explanation of gaps
+- Filters: min salary, location, modality, contract type, company size
+- Feedback loop: "interested", "not interested", "already applied"
+- Push notifications + weekly email digest
+
+### HU-JSP06: Apply to Job (Ofertar a Convocatoria)
+- Pre-filled application from profile; custom fields per posting; CV auto-generated or manual upload
+- Application states: enviada → en revisión → preseleccionado → entrevista programada → rechazada → contratado
+- Duplicate detection; daily application limit; messaging with recruiter; interview scheduling
+- Analytics: sent/response rate/success rate
+
+### HU-JSP07: Create Publication
+- Content types: text (rich format), images (JPG/PNG/GIF ≤10MB, ≤10 images), articles, job shares, achievements
+- Audience control: public / connections only / specific groups; commenting controls
+- Social: likes/reactions, nested comments, repost, bookmarks, report
+- Hashtags with trending + suggestions; @mentions with notifications
+- Analytics: reach, engagement, best post time, audience demographics
+- Scheduled posts, draft auto-save, edit history indicator
+
+## Non-Functional Requirements (JSP)
+
+| Category | Requirement |
+|----------|-------------|
+| Security | JWT + refresh tokens; AES-256 for sensitive data; HTTPS only; full audit trail; GDPR + CCPA compliance |
+| Performance | Page load < 3s; API response < 500ms (p95); 10,000 concurrent users; CDN for static assets; multi-level caching |
+| Usability | Responsive (mobile/tablet/desktop); ≤3 clicks to main features; WCAG 2.1 AA; i18n (ES, EN, PT); guided onboarding |
+| Availability | 99.9% uptime SLA; auto-backup every 6h; RTO < 4h; 24/7 monitoring; auto-scaling |
+
 ## Authentication
 
 - Library: `jwt-simple`
@@ -170,6 +255,7 @@ MongoDB
 |----------|---------|---------|
 | `PORT` | `3000` | HTTP listen port |
 | `MONGODB_URL` | `mongodb://localhost:27017/social` | MongoDB connection string |
+| `JWT_SECRET` | *(hardcoded — not yet env-based)* | JWT signing secret |
 
 ## Feature Lifecycle (AI Reactive Framework)
 
